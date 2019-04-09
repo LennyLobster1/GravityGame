@@ -343,11 +343,25 @@ class Missle(Spark):
         g = 0
         b = 0
         self.image = pygame.Surface((30, 16))
-        pygame.draw.polygon(self.image, (r,g,b), [(0,0), (25,0), (30,4), (25,8), (0,8), (5,4)], 0)
+        pygame.draw.polygon(self.image, (r, g, b), [(0,0), (25,0), (30,4), (25,8), (0,8), (5,4)], 0)
         pygame.draw.circle (self.image, (128, 128, 0), (5,4), 3)
         self.image.set_colorkey((0,0,0))
         self.rect= self.image.get_rect()
         self.image0 = self.image.copy()     
+
+
+class Bullet(Spark):
+    
+        def create_image(self):
+            r,g,b = self.color
+            r = 200
+            g = 200
+            b = 0
+            self.image = pygame.Surface((8,8))
+            pygame.draw.circle (self.image, (r, g, b), (5,5), 3)
+            self.image.set_colorkey((0,0,0))
+            self.rect= self.image.get_rect()
+            self.image0 = self.image.copy()     
 
 
 class Explosion():
@@ -375,7 +389,7 @@ class Ufo(VectorSprite):
         self.move = pygame.math.Vector2(-40, -20)
         self.bounce_on_edge = True
         self.radius = 50
-        self.hitpoints = 15
+        self.hitpoints = 1
         #self.mousegravity = True
         #self.gravity =pygame.math.Vector2(0,-5)
 
@@ -566,6 +580,7 @@ class Viewer(object):
         Flytext.groups = self.allgroup, self.flytextgroup
         Missle.groups = self.allgroup, self.misslegroup
         Ufo.groups = self.allgroup, self.ufogroup
+        Bullet.groups = self.allgroup, self.misslegroup
         #self.player1 =  Player(imagename="player1", warp_on_edge=True, pos=pygame.math.Vector2(Viewer.width/2-100,-Viewer.height/2))
         #self.player2 =  Player(imagename="player2", angle=180,warp_on_edge=True, pos=pygame.math.Vector2(Viewer.width/2+100,-Viewer.height/2))
 
@@ -677,6 +692,7 @@ class Viewer(object):
             # -------- next frame -------------
             pygame.display.flip()
         #----------------------------------------------------- 
+    
     def run(self):
         """The mainloop"""
         
@@ -746,6 +762,15 @@ class Viewer(object):
                 #Explosion(posvector = p2, red = r, blue = b, green = g, maxlifetime = 100, maxsparks = 1, minsparks = 1, minspeed = 300, maxspeed = 300, maxangle = 90, minangle = 90, kill = True, bounce = False)
                 Missle(pos = p2, move = pygame.math.Vector2(0, random.randint(250, 350)), angle = 90)
             
+            
+            if oldright and not right:
+                x = pygame.mouse.get_pos()[0]
+                
+                dy = random.randint(50, 150)
+                for dx in range(-20, 20, 4):
+                     p2 = pygame.math.Vector2(x,-Viewer.height)
+                     Bullet(pos = p2, move=pygame.math.Vector2(dx, dy))
+                
             oldleft, oldmiddle, oldright = left, middle, right
 
            
