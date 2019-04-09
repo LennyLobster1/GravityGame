@@ -251,7 +251,7 @@ class VectorSprite(pygame.sprite.Sprite):
                     l = 1/v.length()
                     v.normalize_ip()
                 except:
-                    l = 0			
+                    l = 0           
                 v *= l * 20000
                 self.move += v
                 
@@ -265,39 +265,39 @@ class VectorSprite(pygame.sprite.Sprite):
     def wallbounce(self):
         # ---- bounce / kill on screen edge ----
         # ------- left edge ----
-        if self.pos.x < 0:
+        if self.pos.x - self.radius < 0:
             if self.kill_on_edge:
                 self.kill()
             elif self.bounce_on_edge:
-                self.pos.x = 0
+                self.pos.x = self.radius
                 self.move.x *= -1
             elif self.warp_on_edge:
                 self.pos.x = Viewer.width 
         # -------- upper edge -----
-        if self.pos.y  > 0:
+        if self.pos.y  > -self.radius:
             if self.kill_on_edge and not self.survive_north:
                 self.kill()
             elif self.bounce_on_edge:
-                self.pos.y = 0
+                self.pos.y = -self.radius
                 self.move.y *= -1
             elif self.warp_on_edge:
                 self.pos.y = -Viewer.height
         # -------- right edge -----                
-        if self.pos.x  > Viewer.width:
+        if self.pos.x + self.radius > Viewer.width:
             if self.kill_on_edge:
                 self.kill()
             elif self.bounce_on_edge:
-                self.pos.x = Viewer.width
+                self.pos.x = Viewer.width - self.radius
                 self.move.x *= -1
             elif self.warp_on_edge:
                 self.pos.x = 0
         # --------- lower edge ------------
-        if self.pos.y   < -Viewer.height:
+        if self.pos.y < -Viewer.height + self.radius:
             if self.kill_on_edge:
                 self.hitpoints = 0
                 self.kill()
             elif self.bounce_on_edge:
-                self.pos.y = -Viewer.height
+                self.pos.y = -Viewer.height + self.radius
                 self.move.y *= -1
             elif self.warp_on_edge:
                 self.pos.y = 0
@@ -312,7 +312,7 @@ class Flytext(VectorSprite):
     def create_image(self):
         self.image = make_text(self.text, (self.r, self.g, self.b), self.fontsize)  # font 22
         self.rect = self.image.get_rect()
-        
+
 
 class Spark(VectorSprite):
     
@@ -334,6 +334,21 @@ class Spark(VectorSprite):
         self.rect= self.image.get_rect()
         self.image0 = self.image.copy()                          
         
+    
+class Missle(Spark):
+    
+    def create_image(self):
+        r,g,b = self.color
+        r = 200
+        g = 0
+        b = 0
+        self.image = pygame.Surface((30, 16))
+        pygame.draw.polygon(self.image, (r,g,b), [(0,0), (25,0), (30,4), (25,8), (0,8), (5,4)], 0)
+        pygame.draw.circle (self.image, (128, 128, 0), (5,4), 3)
+        self.image.set_colorkey((0,0,0))
+        self.rect= self.image.get_rect()
+        self.image0 = self.image.copy()     
+
 
 class Explosion():
     """emits a lot of sparks, for Explosion or Player engine"""
@@ -352,19 +367,21 @@ class Explosion():
             blue  = randomize_color(blue, blue_delta)
             Spark(pos=pygame.math.Vector2(posvector.x, posvector.y),
                   angle= a, move=v*speed, max_age = duration, 
-                  color=(red,green,blue), kill_on_edge = kill, gravity = pygame.math.Vector2(0,-5), bounce_on_edge = bounce, mg = mousegravity)
+                  color=(red,green,blue), kill_on_edge = kill, gravity = pygame.math.Vector2(0, 0), bounce_on_edge = bounce, mg = mousegravity)
                  
 class Ufo(VectorSprite):
     
     def _overwrite_parameters(self):
-        self.move = pygame.math.Vector2(-20, -10)
+        self.move = pygame.math.Vector2(-40, -20)
         self.bounce_on_edge = True
+        self.radius = 50
+        self.hitpoints = 15
         #self.mousegravity = True
         #self.gravity =pygame.math.Vector2(0,-5)
 
     def create_image(self):
         self.image = pygame.Surface((100,100))
-        pygame.draw.circle(self.image, (163,0,199), (50,50), 50)
+        pygame.draw.circle(self.image, (163,0,199), (50,50), self.radius)
         self.image.set_colorkey((0,0,0))
         self.image = self.image.convert_alpha()
         self.image0 = self.image.copy()
@@ -541,10 +558,14 @@ class Viewer(object):
         self.load_sprites()
         self.allgroup =  pygame.sprite.LayeredUpdates() # for drawing
         self.flytextgroup = pygame.sprite.Group()
+        self.misslegroup = pygame.sprite.Group()
+        self.ufogroup = pygame.sprite.Group()
         #self.mousegroup = pygame.sprite.Group()
         
         VectorSprite.groups = self.allgroup
         Flytext.groups = self.allgroup, self.flytextgroup
+        Missle.groups = self.allgroup, self.misslegroup
+        Ufo.groups = self.allgroup, self.ufogroup
         #self.player1 =  Player(imagename="player1", warp_on_edge=True, pos=pygame.math.Vector2(Viewer.width/2-100,-Viewer.height/2))
         #self.player2 =  Player(imagename="player2", angle=180,warp_on_edge=True, pos=pygame.math.Vector2(Viewer.width/2+100,-Viewer.height/2))
 
@@ -720,9 +741,10 @@ class Viewer(object):
             
             # left mouse button pressed?
             if oldleft and not left:
-                x, y = pygame.mouse.get_pos()
-                p2 = pygame.math.Vector2(x,-y)
-                Explosion(posvector = p2, red = r, blue = b, green = g, maxlifetime = 100, maxsparks = 1, minsparks = 1, minspeed = 10, maxspeed = 100, maxangle = 90, minangle = 90)
+                x = pygame.mouse.get_pos()[0]
+                p2 = pygame.math.Vector2(x,-Viewer.height)
+                #Explosion(posvector = p2, red = r, blue = b, green = g, maxlifetime = 100, maxsparks = 1, minsparks = 1, minspeed = 300, maxspeed = 300, maxangle = 90, minangle = 90, kill = True, bounce = False)
+                Missle(pos = p2, move = pygame.math.Vector2(0, random.randint(250, 350)), angle = 90)
             
             oldleft, oldmiddle, oldright = left, middle, right
 
@@ -767,14 +789,15 @@ class Viewer(object):
             write(self.screen, "FPS: {:8.3}".format(
                 self.clock.get_fps() ), x=Viewer.width-200, y=10, color=(200,200,200))
             
-            # ----- collision detection between player and PowerUp---
-            #for p in self.playergroup:
-            #    crashgroup=pygame.sprite.spritecollide(p,
-            #               self.powerupgroup, False, 
-            #               pygame.sprite.collide_mask)
-            #    for o in crashgroup:
-            #            Explosion(o.pos, red=128, green=0, blue=128)
-            #            o.kill()
+            # ----- collision detection between Ufo and Missles---
+            for u in self.ufogroup:
+                crashgroup=pygame.sprite.spritecollide(u,
+                           self.misslegroup, True, 
+                           pygame.sprite.collide_mask)
+                for m in crashgroup:
+                        u.hitpoints -= 1
+                        Explosion(m.pos, red=128, green=0, blue=128)
+                        #m.kill()
             
                    
             # ================ UPDATE all sprites =====================
@@ -793,4 +816,4 @@ class Viewer(object):
         pygame.quit()
 
 if __name__ == '__main__':
-    Viewer(1430,800).run()
+    Viewer(1330,680).run()
