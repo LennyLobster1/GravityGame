@@ -1,9 +1,14 @@
 """
 author: LennyLobster
+
 email: lenny.lobster@a1.net
+
 contact: +43 664 5165165
+
 license: gpl, see http://www.gnu.org/licenses/gpl-3.0.de.html
-download: https://github.com/horstjens/catapults3d
+
+download: https://github.com/LennyLobster1/GravityGame
+
 idea: python3/pygame 3d vector rts game
 
 """
@@ -45,7 +50,7 @@ def write(background, text="bla", pos=None, color=(0,0,0),
             background.blit(surface, (x-fw//2, y-fh//2))
         else:      # topleft corner is x,y
             background.blit(surface, (x,y))
-            
+
 def mouseVector():
     return pygame.math.Vector2(pygame.mouse.get_pos()[0],-pygame.mouse.get_pos()[1])
 
@@ -55,7 +60,7 @@ def elastic_collision(sprite1, sprite2):
            The sprites need the property .mass, .radius, pos.x pos.y, move.x, move.y
            by Leonard Michlmayr"""
         if sprite1.static and sprite2.static:
-            return 
+            return
         dirx = sprite1.pos.x - sprite2.pos.x
         diry = sprite1.pos.y - sprite2.pos.y
         sumofmasses = sprite1.mass + sprite2.mass
@@ -100,13 +105,13 @@ class VectorSprite(pygame.sprite.Sprite):
         self.rect.center = (-300,-300) # avoid blinking image in topleft corner
         if self.angle != 0:
             self.set_angle(self.angle)
-        self.tail = [] 
+        self.tail = []
 
     def _overwrite_parameters(self):
-        """change parameters before create_image is called""" 
+        """change parameters before create_image is called"""
         pass
 
-    def _default_parameters(self, **kwargs):    
+    def _default_parameters(self, **kwargs):
         """get unlimited named arguments and turn them into attributes
            default values for missing keywords"""
 
@@ -132,7 +137,7 @@ class VectorSprite(pygame.sprite.Sprite):
             self.width = self.radius * 2
         if "height" not in kwargs:
             self.height = self.radius * 2
-        
+
         if "hitpoints" not in kwargs:
             self.hitpoints = 100
         self.hitpointsfull = self.hitpoints # makes a copy
@@ -251,12 +256,12 @@ class VectorSprite(pygame.sprite.Sprite):
                     l = 1/v.length()
                     v.normalize_ip()
                 except:
-                    l = 0           
+                    l = 0
                 v *= l * 20000
                 self.move += v
-                
+
         self.pos += self.move * seconds
-        self.move *= self.friction 
+        self.move *= self.friction
         self.distance_traveled += self.move.length() * seconds
         self.age += seconds
         self.wallbounce()
@@ -272,7 +277,7 @@ class VectorSprite(pygame.sprite.Sprite):
                 self.pos.x = self.radius
                 self.move.x *= -1
             elif self.warp_on_edge:
-                self.pos.x = Viewer.width 
+                self.pos.x = Viewer.width
         # -------- upper edge -----
         if self.pos.y  > -self.radius:
             if self.kill_on_edge and not self.survive_north:
@@ -282,7 +287,7 @@ class VectorSprite(pygame.sprite.Sprite):
                 self.move.y *= -1
             elif self.warp_on_edge:
                 self.pos.y = -Viewer.height
-        # -------- right edge -----                
+        # -------- right edge -----
         if self.pos.x + self.radius > Viewer.width:
             if self.kill_on_edge:
                 self.kill()
@@ -304,39 +309,39 @@ class VectorSprite(pygame.sprite.Sprite):
 
 
 class Flytext(VectorSprite):
-    
+
     def _overwrite_parameters(self):
         self._layer = 7  # order of sprite layers (before / behind other sprites)
         self.r, self.g, self.b = self.color
-        
+
     def create_image(self):
         self.image = make_text(self.text, (self.r, self.g, self.b), self.fontsize)  # font 22
         self.rect = self.image.get_rect()
 
 
 class Spark(VectorSprite):
-    
+
     def _overwrite_parameters(self):
         self._layer = 9
         #self.kill_on_edge = True
-        
+
     def create_image(self):
         r,g,b = self.color
         r = randomize_color(r,50)
         g = randomize_color(g,50)
         b = randomize_color(b,50)
         self.image = pygame.Surface((10,10))
-        pygame.draw.line(self.image, (r,g,b), 
+        pygame.draw.line(self.image, (r,g,b),
                          (10,5), (5,5), 3)
         pygame.draw.line(self.image, (r,g,b),
                           (5,5), (2,5), 1)
         self.image.set_colorkey((0,0,0))
         self.rect= self.image.get_rect()
-        self.image0 = self.image.copy()                          
-        
-    
+        self.image0 = self.image.copy()
+
+
 class Missle(Spark):
-    
+
     def create_image(self):
         r,g,b = self.color
         r = 200
@@ -347,12 +352,17 @@ class Missle(Spark):
         pygame.draw.circle (self.image, (128, 128, 0), (5,4), 3)
         self.image.set_colorkey((0,0,0))
         self.rect= self.image.get_rect()
-        self.image0 = self.image.copy()     
+        self.image0 = self.image.copy()
 
 
 class Bullet(Spark):
-    
-        def create_image(self):
+
+    def _overwrite_parameters(self):
+            self.move.normalize_ip()
+            self.move *= 100
+            self.max_age = 1.5
+
+    def create_image(self):
             r,g,b = self.color
             r = 200
             g = 200
@@ -361,13 +371,29 @@ class Bullet(Spark):
             pygame.draw.circle (self.image, (r, g, b), (5,5), 3)
             self.image.set_colorkey((0,0,0))
             self.rect= self.image.get_rect()
-            self.image0 = self.image.copy()     
-
-
+            self.image0 = self.image.copy()
+            
+#class Laser(Spark):
+#	
+#		def _overwrite_parameters(self):
+#			self.move = pygame.math.Vector2(0, -100)
+#			self.kill_on_edge = True
+#	
+#	    def create_image(self):
+#        r,g,b = self.color
+#        r = 0
+#        g = 255
+#        b = 0
+#        self.image = pygame.Surface((10, 10))
+#        pygame.draw.line(self.image, (r, g, b), (5, 0), (5, 10))
+#        self.image.set_colorkey((0,0,0))
+#        self.rect= self.image.get_rect()
+#        self.image0 = self.image.copy()
+	
 class Explosion():
     """emits a lot of sparks, for Explosion or Player engine"""
     def __init__(self, posvector, minangle=0, maxangle=360, maxlifetime=3,
-                 minspeed=5, maxspeed=150, red=255, red_delta=0, 
+                 minspeed=5, maxspeed=150, red=255, red_delta=0,
                  green=225, green_delta=25, blue=0, blue_delta=0,
                  minsparks=5, maxsparks=20, bounce = True, kill = False, mousegravity = False):
         for s in range(random.randint(minsparks,maxsparks)):
@@ -380,11 +406,11 @@ class Explosion():
             green = randomize_color(green, green_delta)
             blue  = randomize_color(blue, blue_delta)
             Spark(pos=pygame.math.Vector2(posvector.x, posvector.y),
-                  angle= a, move=v*speed, max_age = duration, 
+                  angle= a, move=v*speed, max_age = duration,
                   color=(red,green,blue), kill_on_edge = kill, gravity = pygame.math.Vector2(0, 0), bounce_on_edge = bounce, mg = mousegravity)
-                 
+
 class Ufo(VectorSprite):
-    
+
     def _overwrite_parameters(self):
         self.move = pygame.math.Vector2(-40, -20)
         self.bounce_on_edge = True
@@ -400,13 +426,46 @@ class Ufo(VectorSprite):
         self.image = self.image.convert_alpha()
         self.image0 = self.image.copy()
         self.rect= self.image.get_rect()
+        
+class Alien(VectorSprite):
+    
+    def _overwrite_parameters(self):
+        self.move = pygame.math.Vector2(-40, 0)
+        self.bounce_on_edge = True
+        self.radius = 20
+        self.hitpoints = 5
+    
+    def create_image(self):
+        self.image = pygame.Surface((100,50))
+        pygame.draw.ellipse(self.image, (19, 199, 0), (0,0,100,50))
+        pygame.draw.circle(self.image, (153,153,153), (50,25), self.radius)
+        self.image.set_colorkey((0,0,0))
+        self.image = self.image.convert_alpha()
+        self.image0 = self.image.copy()
+        self.rect= self.image.get_rect()
+        
+class Bomb(VectorSprite):
+    
+    def _overwrite_parameters(self):
+        self.move = pygame.math.Vector2(-40, -40)
+        self.bounce_on_edge = True
+        self.radius = 20
+        self.hitpoints = 1
+    
+    def create_image(self):
+        self.image = pygame.Surface((20,20))
+        pygame.draw.circle(self.image, (0,0,255), (10,10), self.radius)
+        self.image.set_colorkey((0,0,0))
+        self.image = self.image.convert_alpha()
+        self.image0 = self.image.copy()
+        self.rect= self.image.get_rect()
 
 class World():
-    
+
     tiles_x = 140
-    tiles_y = 90   
-    
-    
+    tiles_y = 90
+
+
     def __init__(self):
         self.terrain = []
         h = 100
@@ -418,13 +477,13 @@ class World():
                 height = min(255,height)
                 line.append(height)
             self.terrain.append(line)
-            
-   
-            
 
-        
-    
-    
+
+
+
+
+
+
 
 class Viewer(object):
     width = 0
@@ -432,11 +491,12 @@ class Viewer(object):
     images = {}
     sounds = {}
     menu =  {"main":            ["resume", "settings", "credits", "quit" ,"Test" ],
-            "Test":             ["back", "Kleinkinderspaß", "Opfer", "hyperintelligent", "Spaßt" ],
+            "Test":             ["back", "Kleinkinderspaß", "Opfer", "hyperintelligent", "Spaßt", "Hund" ],
             "Kleinkinderspaß":  ["back", "Otto"],
             "Opfer":            ["back", "Otto"],
             "hyperintelligent": ["back", "Lenny"],
             "Spaßt":            ["back", "0tto"],
+            "Hund":             ["back", "Otto"],
             #main
             "settings":        ["back", "video", "difficulty", "reset all values"],
             #settings
@@ -456,7 +516,7 @@ class Viewer(object):
             "bonusrocketincrease": ["back", "1", "2", "3", "5", "10"],
             "bonusrocket duration": ["back", "10", "30", "60"],
             "laserdamage":     ["back", "3", "5", "10"],
-            "laser duration": ["back", "10", "30", "60"],            
+            "laser duration": ["back", "10", "30", "60"],
             "heal effectiveness": ["back", "50", "100", "250", "full health"],
             "bossrocket deflection": ["back", "true", "false"],
             "shield duration": ["back", "10", "30", "60"],
@@ -466,8 +526,8 @@ class Viewer(object):
             "resolution":      ["back", "720p", "1080p", "1440p", "4k"],
             "fullscreen":      ["back", "true", "false"]
             }
-    
-    
+
+
     #Viewer.menu["resolution"] = pygame.display.list_modes()
     history = ["main"]
     cursor = 0
@@ -477,7 +537,7 @@ class Viewer(object):
     def __init__(self, width=640, height=400, fps=60):
         """Initialize pygame, window, background, font,...
            default arguments """
-        pygame.mixer.pre_init(44100,-16, 2, 2048)   
+        pygame.mixer.pre_init(44100,-16, 2, 2048)
         pygame.init()
         Viewer.width = width    # make global readable
         Viewer.height = height
@@ -498,8 +558,8 @@ class Viewer(object):
             li.append(str(x)+"x"+str(y))
         Viewer.menu["resolution"] = li
         self.set_resolution()
-        
-        
+
+
         # ------ background images ------
         #self.backgroundfilenames = [] # every .jpg file in folder 'data'
         #try:
@@ -522,51 +582,51 @@ class Viewer(object):
         self.load_sounds()
         self.world = World()
         #print(self.world)
-        
-        
+
+
     def load_sounds(self):
         #Viewer.sounds["click"]=  pygame.mixer.Sound(
         #         os.path.join("data", "panzersound1.wav"))
         return
-    
-    
+
+
     def set_resolution(self):
         if Viewer.fullscreen:
              self.screen = pygame.display.set_mode((self.width, self.height), pygame.DOUBLEBUF|pygame.FULLSCREEN)
         else:
              self.screen = pygame.display.set_mode((self.width, self.height), pygame.DOUBLEBUF)
         self.loadbackground()
-    
-    
+
+
     def loadbackground(self):
-        
+
         self.background = pygame.Surface(self.screen.get_size()).convert()
         self.background.fill((0,0,128)) # fill background white
-            
+
         self.background = pygame.transform.scale(self.background,
                           (Viewer.width,Viewer.height))
         self.background.convert()
-        
-    
+
+
     def paint_world(self):
         for y, line in enumerate(self.world.terrain):
             for x, tile in enumerate(line):
                 h = self.world.terrain[y][x]
                 pygame.draw.rect(self.screen,(h,h,h), (x*10, y*10,10,10))
-        
-    
+
+
     def load_sprites(self):
             print("loading sprites from 'data' folder....")
             #Viewer.images["player1"]= pygame.image.load(
             #     os.path.join("data", "player1.png")).convert_alpha()
-            
+
             # --- scalieren ---
             #for name in Viewer.images:
             #    if name == "bossrocket":
             #        Viewer.images[name] = pygame.transform.scale(
             #                        Viewer.images[name], (60, 60))
-            
-     
+
+
     def prepare_sprites(self):
         """painting on the surface and create sprites"""
         self.load_sprites()
@@ -574,13 +634,17 @@ class Viewer(object):
         self.flytextgroup = pygame.sprite.Group()
         self.misslegroup = pygame.sprite.Group()
         self.ufogroup = pygame.sprite.Group()
+        self.aliengroup = pygame.sprite.Group()
+        self.bombgroup = pygame.sprite.Group()
         #self.mousegroup = pygame.sprite.Group()
-        
+
         VectorSprite.groups = self.allgroup
         Flytext.groups = self.allgroup, self.flytextgroup
         Missle.groups = self.allgroup, self.misslegroup
         Ufo.groups = self.allgroup, self.ufogroup
         Bullet.groups = self.allgroup, self.misslegroup
+        Alien.groups = self.allgroup, self.aliengroup
+        Bomb.groups = self.allgroup, self.bombgroup
         #self.player1 =  Player(imagename="player1", warp_on_edge=True, pos=pygame.math.Vector2(Viewer.width/2-100,-Viewer.height/2))
         #self.player2 =  Player(imagename="player2", angle=180,warp_on_edge=True, pos=pygame.math.Vector2(Viewer.width/2+100,-Viewer.height/2))
 
@@ -589,11 +653,11 @@ class Viewer(object):
         running = True
         #pygame.mouse.set_visible(False)
         while running:
-            
+
             #pygame.mixer.music.pause()
             milliseconds = self.clock.tick(self.fps) #
             seconds = milliseconds / 1000
-            
+
             # -------- events ------
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -617,7 +681,7 @@ class Viewer(object):
                             Viewer.menucommandsound.play()
                         elif text in Viewer.menu:
                             # changing to another menu
-                            Viewer.history.append(text) 
+                            Viewer.history.append(text)
                             Viewer.name = text
                             Viewer.cursor = 0
                             #Viewer.menuselectsound.play()
@@ -632,7 +696,7 @@ class Viewer(object):
                             #Viewer.menucommandsound.play()
                             # direct action
                         elif text == "credits":
-                            Flytext(x=700, y=400, text="by Bigm0 and BakTheBig", fontsize = 100)  
+                            Flytext(x=700, y=400, text="by Bigm0 and BakTheBig", fontsize = 100)
 
                         if Viewer.name == "resolution":
                             # text is something like 800x600
@@ -644,7 +708,7 @@ class Viewer(object):
                                 Viewer.height = y
                                 self.set_resolution()
                                 #Viewer.menucommandsound.play()
-                                    
+
                         if Viewer.name == "fullscreen":
                             if text == "true":
                                 #Viewer.menucommandsound.play()
@@ -654,13 +718,13 @@ class Viewer(object):
                                 #Viewer.menucommandsound.play()
                                 Viewer.fullscreen = False
                                 self.set_resolution()
-                        
+
             # ------delete everything on screen-------
             self.screen.blit(self.background, (0, 0))
-            
-            
-         
-            # -------------- UPDATE all sprites -------             
+
+
+
+            # -------------- UPDATE all sprites -------
             self.flytextgroup.update(seconds)
 
             # ----------- clear, draw , update, flip -----------------
@@ -669,14 +733,14 @@ class Viewer(object):
             # --- paint menu ----
             # ---- name of active menu and history ---
             write(self.screen, text="you are here:", x=200, y=50, color=(0,255,255))
-            
+
             t = "main"
             for nr, i in enumerate(Viewer.history[1:]):
                 #if nr > 0:
                 t+=(" > ")
                 t+=(i)
                 #
-            
+
             #t+=Viewer.name
             write(self.screen, text=t, x=200,y=70,color=(0,255,255))
             # --- menu items ---
@@ -685,17 +749,17 @@ class Viewer(object):
                 write(self.screen, text=item, x=200, y=100+y*20, color=(255,255,255))
             # --- cursor ---
             write(self.screen, text="-->", x=100, y=100+ Viewer.cursor * 20, color=(255,255,255))
-                        
-            
-           
-                
+
+
+
+
             # -------- next frame -------------
             pygame.display.flip()
-        #----------------------------------------------------- 
-    
+        #-----------------------------------------------------
+
     def run(self):
         """The mainloop"""
-        
+
         running = True
         self.menu_run()
         #pygame.mouse.set_visible(False)
@@ -703,7 +767,7 @@ class Viewer(object):
         while running:
             #pygame.display.set_caption("player1 hp: {} player2 hp: {}".format(
             #                     self.player1.hitpoints, self.player2.hitpoints))
-            
+
             milliseconds = self.clock.tick(self.fps) #
             seconds = milliseconds / 1000
             self.playtime += seconds
@@ -724,7 +788,7 @@ class Viewer(object):
                 if event.type == pygame.QUIT:
                     running = False
                 # ------- pressed and released key ------
-               
+
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         running = False
@@ -744,36 +808,48 @@ class Viewer(object):
                     if event.key == pygame.K_d:
                         v = pygame.math.Vector2(50, 0)
                         Ufo(move = v)
+                    if event.key == pygame.K_f:
+                        v = pygame.math.Vector2(50, 0)
+                        for x in range(10):
+                            Ufo(move = v)
+                    if event.key == pygame.K_a:
+                        v = pygame.math.Vector2(200, 0)
+                        Alien(move = v)
+                    if event.key == pygame.K_s:
+                        v = pygame.math.Vector2(10, 0)
+                        Bomb(move = v)
+
+
 
             # ------------ pressed keys ------
             pressed_keys = pygame.key.get_pressed()
             # ------- movement keys for player1 -------
-            
+
             #if pressed_keys[pygame.K_l]:
             #            self.player2.turn_right()
-            
+
             # ------ mouse handler ------
             left, middle, right = pygame.mouse.get_pressed()
-            
+
             # left mouse button pressed?
             if oldleft and not left:
                 x = pygame.mouse.get_pos()[0]
                 p2 = pygame.math.Vector2(x,-Viewer.height)
                 #Explosion(posvector = p2, red = r, blue = b, green = g, maxlifetime = 100, maxsparks = 1, minsparks = 1, minspeed = 300, maxspeed = 300, maxangle = 90, minangle = 90, kill = True, bounce = False)
                 Missle(pos = p2, move = pygame.math.Vector2(0, random.randint(250, 350)), angle = 90)
-            
-            
+
+
             if oldright and not right:
                 x = pygame.mouse.get_pos()[0]
-                
-                dy = random.randint(50, 150)
+
+                dy = 30
                 for dx in range(-20, 20, 4):
                      p2 = pygame.math.Vector2(x,-Viewer.height)
                      Bullet(pos = p2, move=pygame.math.Vector2(dx, dy))
-                
+
             oldleft, oldmiddle, oldright = left, middle, right
 
-           
+
             # ------ joystick handler -------
             #for number, j in enumerate(self.joysticks):
             #    if number == 0:
@@ -781,7 +857,7 @@ class Viewer(object):
             #    elif number ==1:
             #        player = self.player2
             #    else:
-            #        continue 
+            #        continue
              #   x = j.get_axis(0)
              #   y = j.get_axis(1)
                 #if y > 0.5:
@@ -792,7 +868,7 @@ class Viewer(object):
                 #    player.turn_right()
                 #if x < -0.5:
                 #    player.turn_left()
-                
+
               #  buttons = j.get_numbuttons()
               #  for b in range(buttons):
                #        pushed = j.get_button( b )
@@ -801,43 +877,65 @@ class Viewer(object):
                 #       if b == 4 and pushed:
                 #           player.strafe_left()
                 #       if b == 5 and pushed:
-                #           player.strafe_right()                
-                
-              
+                #           player.strafe_right()
+
+
             # =========== delete everything on screen ==============
             self.screen.blit(self.background, (0, 0))
-                       
-            
+
+
             #--self.paint_world()
-                       
+
             # write text below sprites
             write(self.screen, "FPS: {:8.3}".format(
                 self.clock.get_fps() ), x=Viewer.width-200, y=10, color=(200,200,200))
-            
+
             # ----- collision detection between Ufo and Missles---
             for u in self.ufogroup:
                 crashgroup=pygame.sprite.spritecollide(u,
-                           self.misslegroup, True, 
+                           self.misslegroup, True,
                            pygame.sprite.collide_mask)
                 for m in crashgroup:
                         u.hitpoints -= 1
-                        Explosion(m.pos, red=128, green=0, blue=128)
+                        Explosion(m.pos, red = 128, green = 0, blue = 128)
                         #m.kill()
-            
-                   
+                        
+            # ----- collision detection between Alien and Missles---
+            for a in self.aliengroup:
+                crashgroup=pygame.sprite.spritecollide(a,
+                           self.misslegroup, True,
+                           pygame.sprite.collide_mask)
+                for m in crashgroup:
+                        a.hitpoints -= 1
+                        Explosion(m.pos, red = 19, green = 199, blue = 0)
+                        #m.kill()#999999
+                
+             # ----- collision detection between Bomb and Missles---
+            for b in self.bombgroup:
+                crashgroup=pygame.sprite.spritecollide(b,
+                           self.misslegroup, True,
+                           pygame.sprite.collide_mask)
+                for m in crashgroup:
+                    Explosion(m.pos, red=200, green=0, blue=20)
+                    b.hitpoints -= 1
+                    for u in self.ufogroup:
+                        Explosion(posvector = pygame.math.Vector2(u.pos.x, u.pos.y), red = 128, green = 0, blue = 128)
+                        u.kill()
+
+
             # ================ UPDATE all sprites =====================
             self.allgroup.update(seconds)
 
             # ----------- clear, draw , update, flip -----------------
             self.allgroup.draw(self.screen)
 
-            
-           
-                
+
+
+
             # -------- next frame -------------
             pygame.display.flip()
         #-----------------------------------------------------
-        pygame.mouse.set_visible(True)    
+        pygame.mouse.set_visible(True)
         pygame.quit()
 
 if __name__ == '__main__':
