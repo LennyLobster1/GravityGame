@@ -1,14 +1,9 @@
 """
 author: LennyLobster
-
 email: lenny.lobster@a1.net
-
 contact: +43 664 5165165
-
 license: gpl, see http://www.gnu.org/licenses/gpl-3.0.de.html
-
 download: https://github.com/LennyLobster1/GravityGame
-
 idea: python3/pygame 3d vector rts game
 
 """
@@ -373,23 +368,29 @@ class Bullet(Spark):
             self.rect= self.image.get_rect()
             self.image0 = self.image.copy()
             
-#class Laser(Spark):
-#	
-#		def _overwrite_parameters(self):
-#			self.move = pygame.math.Vector2(0, -100)
-#			self.kill_on_edge = True
-#	
-#	    def create_image(self):
-#        r,g,b = self.color
-#        r = 0
-#        g = 255
-#        b = 0
-#        self.image = pygame.Surface((10, 10))
-#        pygame.draw.line(self.image, (r, g, b), (5, 0), (5, 10))
-#        self.image.set_colorkey((0,0,0))
-#        self.rect= self.image.get_rect()
-#        self.image0 = self.image.copy()
-	
+class Laser(Spark):
+    
+#    def _overwrite_parameters(self):
+#            self.move = pygame.math.Vector2(0, -100)
+#            self.kill_on_edge = True
+
+    def _overwrite_parameters(self):
+            self.move.normalize_ip()
+            self.move *= 100
+            self.max_age = 1.5
+    
+    def create_image(self):
+            r,g,b = self.color
+            r = 255
+            g = 0
+            b = 0
+            self.image = pygame.Surface((5, 50))
+            #pygame.draw.line(self.image, (r, g, b), (5, 0), (5, 10))
+            self.image.fill((255,0,0))
+            self.image.set_colorkey((0,0,0))
+            self.rect = self.image.get_rect()
+            self.image0 = self.image.copy()
+    
 class Explosion():
     """emits a lot of sparks, for Explosion or Player engine"""
     def __init__(self, posvector, minangle=0, maxangle=360, maxlifetime=3,
@@ -443,6 +444,20 @@ class Alien(VectorSprite):
         self.image = self.image.convert_alpha()
         self.image0 = self.image.copy()
         self.rect= self.image.get_rect()
+        
+class Player(VectorSprite):
+    
+    def _overwrite_parameters(self):
+        pass
+        
+    def create_image(self):
+        self.image = Viewer.images["player1"]
+        self.image0 = self.image.copy()
+        self.rect= self.image.get_rect()
+        
+    def update(self, seconds):
+        VectorSprite.update(self, seconds)
+        self.pos.x = pygame.mouse.get_pos()[0]
         
 class Bomb(VectorSprite):
     
@@ -583,6 +598,8 @@ class Viewer(object):
         self.world = World()
         #print(self.world)
 
+        self.cheatcode = ""
+        self.cheatmode = False
 
     def load_sounds(self):
         #Viewer.sounds["click"]=  pygame.mixer.Sound(
@@ -617,10 +634,10 @@ class Viewer(object):
 
     def load_sprites(self):
             print("loading sprites from 'data' folder....")
-            #Viewer.images["player1"]= pygame.image.load(
-            #     os.path.join("data", "player1.png")).convert_alpha()
+            Viewer.images["player1"]= pygame.image.load(os.path.join("data", "spaceship.png")).convert_alpha()
 
             # --- scalieren ---
+            Viewer.images["player1"] = pygame.transform.scale(Viewer.images["player1"], (100, 100))
             #for name in Viewer.images:
             #    if name == "bossrocket":
             #        Viewer.images[name] = pygame.transform.scale(
@@ -636,6 +653,8 @@ class Viewer(object):
         self.ufogroup = pygame.sprite.Group()
         self.aliengroup = pygame.sprite.Group()
         self.bombgroup = pygame.sprite.Group()
+        self.lasergroup = pygame.sprite.Group()
+        self.playergroup = pygame.sprite.Group()
         #self.mousegroup = pygame.sprite.Group()
 
         VectorSprite.groups = self.allgroup
@@ -645,10 +664,14 @@ class Viewer(object):
         Bullet.groups = self.allgroup, self.misslegroup
         Alien.groups = self.allgroup, self.aliengroup
         Bomb.groups = self.allgroup, self.bombgroup
+        Laser.groups = self.allgroup, self.lasergroup
+        Player.groups = self.allgroup, self.playergroup
         #self.player1 =  Player(imagename="player1", warp_on_edge=True, pos=pygame.math.Vector2(Viewer.width/2-100,-Viewer.height/2))
         #self.player2 =  Player(imagename="player2", angle=180,warp_on_edge=True, pos=pygame.math.Vector2(Viewer.width/2+100,-Viewer.height/2))
 
+        Player(pos = pygame.math.Vector2(pygame.mouse.get_pos()[0], -Viewer.height + 45))
         Ufo()
+        
     def menu_run(self):
         running = True
         #pygame.mouse.set_visible(False)
@@ -818,7 +841,18 @@ class Viewer(object):
                     if event.key == pygame.K_s:
                         v = pygame.math.Vector2(10, 0)
                         Bomb(move = v)
-
+                    if event.key == pygame.K_1:
+						if not self.cheatmode:
+							self.cheatcode += "1"
+					if event.key == pygame.K_2:
+						if not self.cheatmode and self.cheatcode == "1":
+							self.cheatcode += "12"
+					if event.key == pygame.K_3:
+						if not self.cheatmode and self.cheatcode == "12":
+							self.cheatcode += "123"
+					if event.key == pygame.K_4:
+						if not self.cheatmode and self.cheatcode == "123":
+							self.cheatmode = True
 
 
             # ------------ pressed keys ------
@@ -834,7 +868,7 @@ class Viewer(object):
             # left mouse button pressed?
             if oldleft and not left:
                 x = pygame.mouse.get_pos()[0]
-                p2 = pygame.math.Vector2(x,-Viewer.height)
+                p2 = pygame.math.Vector2(x, -Viewer.height + 60)
                 #Explosion(posvector = p2, red = r, blue = b, green = g, maxlifetime = 100, maxsparks = 1, minsparks = 1, minspeed = 300, maxspeed = 300, maxangle = 90, minangle = 90, kill = True, bounce = False)
                 Missle(pos = p2, move = pygame.math.Vector2(0, random.randint(250, 350)), angle = 90)
 
@@ -844,8 +878,17 @@ class Viewer(object):
 
                 dy = 30
                 for dx in range(-20, 20, 4):
-                     p2 = pygame.math.Vector2(x,-Viewer.height)
-                     Bullet(pos = p2, move=pygame.math.Vector2(dx, dy))
+                     p2 = pygame.math.Vector2(x, -Viewer.height + 60)
+                     Bullet(pos = p2, move = pygame.math.Vector2(dx, dy))
+                     
+            if self.maschienenpistole == True:      
+				if left:
+					x = pygame.mouse.get_pos()[0]
+
+					dy = 30
+					for dx in range(-20, 20, 4):
+						p2 = pygame.math.Vector2(x,-Viewer.height)
+						Missle(pos = p2, move = pygame.math.Vector2(dx, dy))
 
             oldleft, oldmiddle, oldright = left, middle, right
 
@@ -889,6 +932,8 @@ class Viewer(object):
             # write text below sprites
             write(self.screen, "FPS: {:8.3}".format(
                 self.clock.get_fps() ), x=Viewer.width-200, y=10, color=(200,200,200))
+                
+            #pygame.draw.line(self.screen, (200,0,0), (pygame.mouse.get_pos()[0],800), (pygame.mouse.get_pos()[0], 400), 4)
 
             # ----- collision detection between Ufo and Missles---
             for u in self.ufogroup:
