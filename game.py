@@ -842,17 +842,17 @@ class Viewer(object):
                         v = pygame.math.Vector2(10, 0)
                         Bomb(move = v)
                     if event.key == pygame.K_1:
-						if not self.cheatmode:
-							self.cheatcode += "1"
-					if event.key == pygame.K_2:
-						if not self.cheatmode and self.cheatcode == "1":
-							self.cheatcode += "12"
-					if event.key == pygame.K_3:
-						if not self.cheatmode and self.cheatcode == "12":
-							self.cheatcode += "123"
-					if event.key == pygame.K_4:
-						if not self.cheatmode and self.cheatcode == "123":
-							self.cheatmode = True
+                        if not self.cheatmode:
+                            self.cheatcode += "1"
+                    if event.key == pygame.K_2:
+                        if not self.cheatmode and self.cheatcode == "1":
+                            self.cheatcode += "12"
+                    if event.key == pygame.K_3:
+                        if not self.cheatmode and self.cheatcode == "12":
+                            self.cheatcode += "123"
+                    if event.key == pygame.K_4:
+                        if not self.cheatmode and self.cheatcode == "123":
+                            self.cheatmode = True
 
 
             # ------------ pressed keys ------
@@ -882,13 +882,13 @@ class Viewer(object):
                      Bullet(pos = p2, move = pygame.math.Vector2(dx, dy))
                      
             if self.maschienenpistole == True:      
-				if left:
-					x = pygame.mouse.get_pos()[0]
+                if left:
+                    x = pygame.mouse.get_pos()[0]
 
-					dy = 30
-					for dx in range(-20, 20, 4):
-						p2 = pygame.math.Vector2(x,-Viewer.height)
-						Missle(pos = p2, move = pygame.math.Vector2(dx, dy))
+                    dy = 30
+                    for dx in range(-20, 20, 4):
+                        p2 = pygame.math.Vector2(x,-Viewer.height)
+                        Missle(pos = p2, move = pygame.math.Vector2(dx, dy))
 
             oldleft, oldmiddle, oldright = left, middle, right
 
