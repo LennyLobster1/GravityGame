@@ -370,23 +370,27 @@ class Bullet(Spark):
             
 class Laser(Spark):
     
-#    def _overwrite_parameters(self):
-#            self.move = pygame.math.Vector2(0, -100)
-#            self.kill_on_edge = True
-
     def _overwrite_parameters(self):
+            self.move = pygame.math.Vector2(1,0)
+            player = VectorSprite.numbers[0]
+            diff =  self.pos - player.pos
+            a = -diff.angle_to(pygame.math.Vector2(1,0)) - 180
+            #a = random.randint(-160,-20)
+            self.move.rotate_ip(a)
+            self.kill_on_edge = True
             self.move.normalize_ip()
-            self.move *= 100
-            self.max_age = 1.5
+            self.move *= random.randint(100,100)
+            self.angle = a
+            #self.max_age = 1.5
     
     def create_image(self):
-            r,g,b = self.color
+            #r,g,b = self.color
             r = 255
             g = 0
-            b = 0
-            self.image = pygame.Surface((5, 50))
+            b = 255
+            self.image = pygame.Surface((15,2))
             #pygame.draw.line(self.image, (r, g, b), (5, 0), (5, 10))
-            self.image.fill((255,0,0))
+            self.image.fill((r,g,b))
             self.image.set_colorkey((0,0,0))
             self.rect = self.image.get_rect()
             self.image0 = self.image.copy()
@@ -428,6 +432,11 @@ class Ufo(VectorSprite):
         self.image0 = self.image.copy()
         self.rect= self.image.get_rect()
         
+    def update(self, seconds):
+        VectorSprite.update(self, seconds)
+        if random.random() < 0.001:
+            Laser(pos =pygame.math.Vector2(self.pos.x, self.pos.y - 50))
+        
 class Alien(VectorSprite):
     
     def _overwrite_parameters(self):
@@ -448,7 +457,7 @@ class Alien(VectorSprite):
 class Player(VectorSprite):
     
     def _overwrite_parameters(self):
-        pass
+        self.hitpoints = 10
         
     def create_image(self):
         self.image = Viewer.images["player1"]
@@ -458,6 +467,25 @@ class Player(VectorSprite):
     def update(self, seconds):
         VectorSprite.update(self, seconds)
         self.pos.x = pygame.mouse.get_pos()[0]
+        
+class Star(VectorSprite):
+    
+    def _overwrite_parameters(self):
+        self.kill_on_edge = True
+        self.pos.x = random.randint(0,Viewer.width)
+        self.pos.y = -10
+        self.move.y = -random.randint(1,100)
+        #print("Ich bin Stern Nr.", self.number)
+        self._layer = -2
+        
+    def create_image(self):
+        self.size = random.choice((1,1,1,1,1,1,1,2,2,2,2,2,3,3,3,4,5))
+        self.image = pygame.Surface((self.size,self.size))
+        farbe = random.randint(150,255)
+        self.image.fill((farbe,farbe,random.choice((0,0,0,0,0,255,255,255,255,0,0,0,100,100))))
+        self.image = self.image.convert_alpha()
+        self.image0 = self.image.copy()
+        self.rect= self.image.get_rect()
         
 class Bomb(VectorSprite):
     
@@ -474,6 +502,10 @@ class Bomb(VectorSprite):
         self.image = self.image.convert_alpha()
         self.image0 = self.image.copy()
         self.rect= self.image.get_rect()
+        
+class Item(VectorSprite):
+    
+    pass
 
 class World():
 
@@ -549,6 +581,7 @@ class Viewer(object):
     name = "main"
     fullscreen = False
 
+
     def __init__(self, width=640, height=400, fps=60):
         """Initialize pygame, window, background, font,...
            default arguments """
@@ -618,7 +651,7 @@ class Viewer(object):
     def loadbackground(self):
 
         self.background = pygame.Surface(self.screen.get_size()).convert()
-        self.background.fill((0,0,128)) # fill background white
+        self.background.fill((0,0,0)) # fill background white
 
         self.background = pygame.transform.scale(self.background,
                           (Viewer.width,Viewer.height))
@@ -655,6 +688,8 @@ class Viewer(object):
         self.bombgroup = pygame.sprite.Group()
         self.lasergroup = pygame.sprite.Group()
         self.playergroup = pygame.sprite.Group()
+        self.itemgroup = pygame.sprite.Group()
+        self.stargroup = pygame.sprite.Group()
         #self.mousegroup = pygame.sprite.Group()
 
         VectorSprite.groups = self.allgroup
@@ -666,6 +701,8 @@ class Viewer(object):
         Bomb.groups = self.allgroup, self.bombgroup
         Laser.groups = self.allgroup, self.lasergroup
         Player.groups = self.allgroup, self.playergroup
+        Item.groups = self.allgroup, self.itemgroup
+        Star.groups = self.allgroup, self.stargroup
         #self.player1 =  Player(imagename="player1", warp_on_edge=True, pos=pygame.math.Vector2(Viewer.width/2-100,-Viewer.height/2))
         #self.player2 =  Player(imagename="player2", angle=180,warp_on_edge=True, pos=pygame.math.Vector2(Viewer.width/2+100,-Viewer.height/2))
 
@@ -846,13 +883,15 @@ class Viewer(object):
                             self.cheatcode += "1"
                     if event.key == pygame.K_2:
                         if not self.cheatmode and self.cheatcode == "1":
-                            self.cheatcode += "12"
+                            self.cheatcode += "2"
                     if event.key == pygame.K_3:
                         if not self.cheatmode and self.cheatcode == "12":
-                            self.cheatcode += "123"
+                            self.cheatcode += "3"
                     if event.key == pygame.K_4:
                         if not self.cheatmode and self.cheatcode == "123":
                             self.cheatmode = True
+                            self.cheatcode = ""
+                            print("Cheatmode aktiviert")
 
 
             # ------------ pressed keys ------
@@ -880,15 +919,14 @@ class Viewer(object):
                 for dx in range(-20, 20, 4):
                      p2 = pygame.math.Vector2(x, -Viewer.height + 60)
                      Bullet(pos = p2, move = pygame.math.Vector2(dx, dy))
-                     
-            if self.maschienenpistole == True:      
-                if left:
+                         
+                if self.cheatmode == True:
                     x = pygame.mouse.get_pos()[0]
 
                     dy = 30
                     for dx in range(-20, 20, 4):
                         p2 = pygame.math.Vector2(x,-Viewer.height)
-                        Missle(pos = p2, move = pygame.math.Vector2(dx, dy))
+                        Missle(pos = p2, move = pygame.math.Vector2(dx, dy), angle = 90)
 
             oldleft, oldmiddle, oldright = left, middle, right
 
@@ -937,7 +975,7 @@ class Viewer(object):
 
             # ----- collision detection between Ufo and Missles---
             for u in self.ufogroup:
-                crashgroup=pygame.sprite.spritecollide(u,
+                crashgroup = pygame.sprite.spritecollide(u,
                            self.misslegroup, True,
                            pygame.sprite.collide_mask)
                 for m in crashgroup:
@@ -947,7 +985,7 @@ class Viewer(object):
                         
             # ----- collision detection between Alien and Missles---
             for a in self.aliengroup:
-                crashgroup=pygame.sprite.spritecollide(a,
+                crashgroup = pygame.sprite.spritecollide(a,
                            self.misslegroup, True,
                            pygame.sprite.collide_mask)
                 for m in crashgroup:
@@ -957,7 +995,7 @@ class Viewer(object):
                 
              # ----- collision detection between Bomb and Missles---
             for b in self.bombgroup:
-                crashgroup=pygame.sprite.spritecollide(b,
+                crashgroup = pygame.sprite.spritecollide(b,
                            self.misslegroup, True,
                            pygame.sprite.collide_mask)
                 for m in crashgroup:
@@ -966,13 +1004,24 @@ class Viewer(object):
                     for u in self.ufogroup:
                         Explosion(posvector = pygame.math.Vector2(u.pos.x, u.pos.y), red = 128, green = 0, blue = 128)
                         u.kill()
-
+                        
+             # ----- collision detection between Player and Laser---
+            for p in self.playergroup:
+                crashgroup = pygame.sprite.spritecollide(p,
+                           self.lasergroup, True,
+                           pygame.sprite.collide_mask)
+                for l in crashgroup:
+                    Explosion(l.pos, red=230, green=230, blue=230)
+                    p.hitpoints -= 1
+    
 
             # ================ UPDATE all sprites =====================
             self.allgroup.update(seconds)
 
             # ----------- clear, draw , update, flip -----------------
             self.allgroup.draw(self.screen)
+            if random.random() < 0.07:
+                Star()
 
 
 
