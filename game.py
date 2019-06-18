@@ -372,15 +372,18 @@ class Laser(Spark):
     
     def _overwrite_parameters(self):
             self.move = pygame.math.Vector2(1,0)
-            player = VectorSprite.numbers[0]
-            diff =  self.pos - player.pos
-            a = -diff.angle_to(pygame.math.Vector2(1,0)) - 180
+            if 0 in VectorSprite.numbers:
+                #self.kill()
+                player = VectorSprite.numbers[0]
+                diff =  self.pos - player.pos
+                a = -diff.angle_to(pygame.math.Vector2(1,0)) - 180
             #a = random.randint(-160,-20)
-            self.move.rotate_ip(a)
+                self.move.rotate_ip(a)
+                self.angle = a
+            
             self.kill_on_edge = True
             self.move.normalize_ip()
             self.move *= random.randint(100,100)
-            self.angle = a
             #self.max_age = 1.5
     
     def create_image(self):
@@ -433,6 +436,17 @@ class Ufo(VectorSprite):
         self.bounce_on_edge = True
         self.radius = 50
         self.hitpoints = 1
+        self.laser_chance = 0.001
+        if Viewer.difficulty == "easy":
+            self.laser_chance = 0.0001
+        elif Viewer.difficulty == "normal":
+            self.laser_chance = 0.001
+        elif Viewer.difficulty == "hard":
+            self.laser_chance = 0.005
+        elif Viewer.difficulty == "extreme":
+            self.laser_chance = 0.01
+        elif Viewer.difficulty == "impossible":
+            self.laser_chance = 0.1
         #self.mousegravity = True
         #self.gravity =pygame.math.Vector2(0,-5)
 
@@ -446,7 +460,7 @@ class Ufo(VectorSprite):
         
     def update(self, seconds):
         VectorSprite.update(self, seconds)
-        if random.random() < 0.001:
+        if random.random() < self.laser_chance:
             Laser(pos =pygame.math.Vector2(self.pos.x, self.pos.y - 50))
         
 class Alien(VectorSprite):
@@ -474,7 +488,24 @@ class Alien(VectorSprite):
 class Player(VectorSprite):
     
     def _overwrite_parameters(self):
-        self.hitpoints = 10
+        self.recalculate_hitpoints()
+        
+    def recalculate_hitpoints(self):
+        if Viewer.difficulty == "easy":
+            self.hitpoints = 100
+        elif Viewer.difficulty == "normal":
+            self.hitpoints = 20
+        elif Viewer.difficulty == "hard":
+            self.hitpoints = 10
+        elif Viewer.difficulty == "extreme":
+            self.hitpoints = 5
+        elif Viewer.difficulty == "impossible":
+            self.hitpoints = 1
+        
+    def kill(self):
+        Explosion(posvector=self.pos, maxlifetime = 10, red = 254, green = 0, blue = 20, kill = True, maxsparks = 1000)
+        VectorSprite.kill(self)
+        
         
     def create_image(self):
         self.image = Viewer.images["player1"]
@@ -552,6 +583,8 @@ class World():
 class Viewer(object):
     width = 0
     height = 0
+    difficulty = "normal"
+    ufo_laser_chance = 0.001
     images = {}
     sounds = {}
     menu =  {"main":            ["resume", "settings", "credits", "quit" ,"Test" ],
@@ -562,13 +595,14 @@ class Viewer(object):
             "Spaßt":            ["back", "0tto"],
             "Hund":             ["back", "Otto"],
             #main
-            "settings":        ["back", "video", "difficulty", "reset all values"],
+            "settings":        ["back", "video", "game settings", "reset all values"],
             #settings
-            "difficulty":      ["back", "powerups", "playerhealth"],
+            "game settings":   ["back", "powerups", "playerhealth", "difficulty"],
             "video":           ["back", "resolution", "fullscreen"],
-            #difficulty
+            #game settings
             "playerhealth":    ["back", "10", "20", "30", "50", "100"],
             "powerups":        ["back", "laser", "bonusrockets", "heal", "shield", "speed"],
+            "difficulty":      ["back", "easy", "normal", "hard", "extreme", "impossible"],
             #powerups
             "bonusrockets":    ["back", "bonusrocketincrease", "bonusrocket duration"],
             "laser":           ["back", "laserdamage", "laser duration"],
@@ -712,9 +746,11 @@ class Viewer(object):
         self.stargroup = pygame.sprite.Group()
         self.badbombgroup = pygame.sprite.Group()
         #self.mousegroup = pygame.sprite.Group()
-
+        self.finalgroup = pygame.sprite.Group()
+        
         VectorSprite.groups = self.allgroup
-        Flytext.groups = self.allgroup, self.flytextgroup
+        Flytext.groups = self.allgroup, self.flytextgroup, self.finalgroup
+        Spark.groups = self.allgroup, self.finalgroup
         Missle.groups = self.allgroup, self.misslegroup
         Ufo.groups = self.allgroup, self.ufogroup
         Bullet.groups = self.allgroup, self.misslegroup
@@ -723,7 +759,7 @@ class Viewer(object):
         Laser.groups = self.allgroup, self.lasergroup
         Player.groups = self.allgroup, self.playergroup
         Item.groups = self.allgroup, self.itemgroup
-        Star.groups = self.allgroup, self.stargroup
+        Star.groups = self.allgroup, self.stargroup, self.finalgroup
         BadBomb.groups = self.allgroup, self.badbombgroup
         #self.player1 =  Player(imagename="player1", warp_on_edge=True, pos=pygame.math.Vector2(Viewer.width/2-100,-Viewer.height/2))
         #self.player2 =  Player(imagename="player2", angle=180,warp_on_edge=True, pos=pygame.math.Vector2(Viewer.width/2+100,-Viewer.height/2))
@@ -768,6 +804,10 @@ class Viewer(object):
                             Viewer.cursor = 0
                             #Viewer.menuselectsound.play()
                         elif text == "resume":
+                            try:
+                                del Viewer.menu["game settings"]
+                            except:
+                                pass
                             return
                             #Viewer.menucommandsound.play()
                             #pygame.mixer.music.unpause()
@@ -778,8 +818,28 @@ class Viewer(object):
                             #Viewer.menucommandsound.play()
                             # direct action
                         elif text == "credits":
-                            Flytext(x=700, y=400, text="by LennyLobster and Mekful", fontsize = 100, maxlifetime = 10, max_age = 10)
+                            Flytext(text="by LennyLobster and Mekful", fontsize = 100, max_age = 10)
                          
+                        elif text == "easy":
+                            Viewer.difficulty = "easy"
+                            Flytext(pos = pygame.math.Vector2(x = 600, y = -50), color = (255, 0, 0), move=pygame.math.Vector2(x = 0, y = 10), text="The difficulty is now easy", max_age = 3)
+                            
+                        elif text == "normal":
+                            Viewer.difficulty = "normal"
+                            Flytext(pos = pygame.math.Vector2(x = 600, y = -50), color = (255, 0, 0), move=pygame.math.Vector2(x = 0, y = 10), text="The difficulty is now normal", max_age = 3)
+                            
+                        elif text == "hard":
+                            Viewer.difficulty = "hard"
+                            Flytext(pos = pygame.math.Vector2(x = 600, y = -50), color = (255, 0, 0), move=pygame.math.Vector2(x = 0, y = 10), text="The difficulty is now hard", max_age = 3)
+                            
+                        elif text == "extreme":
+                            Viewer.difficulty = "extreme"
+                            Flytext(pos = pygame.math.Vector2(x = 600, y = -50), color = (255, 0, 0), move=pygame.math.Vector2(x = 0, y = 10), text="The difficulty is now extreme", max_age = 3)
+                            
+                        elif text == "impossible":
+                            Viewer.difficulty = "impossible"
+                            self.player1.recalculate_hitpoints()
+                            Flytext(pos = pygame.math.Vector2(x = 600, y = -50), color = (255, 0, 0), move=pygame.math.Vector2(x = 0, y = 10), text="The difficulty is now impossible", max_age = 3)  
                          
                         elif Viewer.name == "playerhealth":
                             print(text, int(text))
@@ -1053,14 +1113,17 @@ class Viewer(object):
                 for l in crashgroup:
                     Explosion(l.pos, red=230, green=230, blue=230)
                     p.hitpoints -= 1
-                    
+                    print("You have now {} hitpoints".format(self.player1.hitpoints))
+                    if p.hitpoints <= 0:
+                        self.running = False
+                        
             # ----- collision detection between Player and BadBomb---
             for p in self.playergroup:
                 crashgroup = pygame.sprite.spritecollide(p,
                            self.badbombgroup, False,
                            pygame.sprite.collide_mask)
                 for b in crashgroup:
-                    Explosion(b.pos, red=100, green=255, blue=100, maxsparks = 600)
+                    Explosion(b.pos, red=20, green=255, blue=20, maxsparks = 600)
                     p.hitpoints -= 5
                     b.kill()
     
@@ -1079,6 +1142,27 @@ class Viewer(object):
             # -------- next frame -------------
             pygame.display.flip()
         #-----------------------------------------------------
+        self.final = self.playtime + 10
+        Flytext(pos=pygame.math.Vector2(200,-400), max_age=5, text="Game Over", fontsize = 250)
+        while self.playtime < self.final:
+            milliseconds = self.clock.tick(self.fps) #
+            seconds = milliseconds / 1000
+            self.playtime += seconds
+
+            # =========== delete everything on screen ==============
+            self.screen.blit(self.background, (0, 0))
+
+
+            # ================ UPDATE all sprites =====================
+            self.finalgroup.update(seconds)
+
+            # ----------- clear, draw , update, flip -----------------
+            self.allgroup.draw(self.screen)
+            if random.random() < 0.07:
+                Star()
+            
+            
+            
         pygame.mouse.set_visible(True)
         pygame.quit()
 
